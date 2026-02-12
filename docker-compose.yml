@@ -1,0 +1,35 @@
+# OpenClaw God Mode - Single Container Setup
+# Gateway + Full Dev Environment + Browser + Docker CLI
+# All Telegram users share this container
+
+services:
+  openclaw:
+    build:
+      context: .
+      dockerfile: Dockerfile.godmode
+    container_name: openclaw-godmode
+    restart: unless-stopped
+    ports:
+      - "3000:3000"    # Gateway HTTP
+      - "18789:18789"  # WebSocket control plane
+    volumes:
+      # Persist OpenClaw data (sessions, memory, etc.)
+      - openclaw-data:/home/claw/.openclaw
+      # Shared workspace — all users see this
+      - ./workspace:/home/claw/.openclaw/workspace
+      # Config - mount to /tmp first, then copy in entrypoint
+      - ./config/openclaw.json:/tmp/openclaw-config.json:ro
+      # Docker socket — allows Docker CLI inside container
+      - /var/run/docker.sock:/var/run/docker.sock
+    environment:
+      - ANTHROPIC_API_KEY=${ANTHROPIC_API_KEY}
+      - OPENAI_API_KEY=${OPENAI_API_KEY}
+      - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
+      - NODE_ENV=production
+      - OPENCLAW_GATEWAY_TOKEN=local-dev-token
+    env_file:
+      - .env
+
+volumes:
+  openclaw-data:
+

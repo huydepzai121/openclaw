@@ -1,0 +1,54 @@
+{
+  "models": {
+    "providers": {
+      "myprovider": {
+        "baseUrl": "https://supperapi.store/v1",
+        "apiKey": "${MYPROVIDER_API_KEY}",
+        "api": "openai-completions",
+        "models": [
+          { "id": "claude-opus-4-6", "name": "claude-opus-4-6" },
+          { "id": "claude-sonnet-4-5-20250929", "name": "claude-sonnet-4-5-20250929" }
+        ]
+      }
+    }
+  },
+  "agents": {
+    "defaults": {
+       "model": {
+         "primary": "myprovider/claude-sonnet-4-5-20250929"
+       },
+      "sandbox": {
+        "mode": "off"
+      }
+    }
+  },
+  "tools": {
+    "web": {
+      "search": { "enabled": true },
+      "fetch": { "enabled": true }
+    }
+  },
+  "channels": {
+    "telegram": {
+      "enabled": true,
+      "dmPolicy": "pairing",
+      "groups": {
+        "*": {
+          "groupPolicy": "open",
+          "requireMention": false
+        }
+      }
+    }
+  },
+  "gateway": {
+     "port": 3000,
+     "mode": "local"
+  },
+  "plugins": {
+    "entries": {
+      "telegram": {
+        "enabled": true
+      }
+    }
+  }
+}

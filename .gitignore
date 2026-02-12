@@ -1,0 +1,19 @@
+# Environment variables (chứa API keys, tokens)
+.env
+
+# Claude settings
+.claude/
+
+# OS files
+.DS_Store
+Thumbs.db
+
+# Docker volumes
+openclaw-data/
+
+# Node modules (nếu có)
+node_modules/
+
+# Logs
+*.log
+
