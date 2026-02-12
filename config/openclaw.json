@@ -2,7 +2,7 @@
   "models": {
     "providers": {
       "myprovider": {
-        "baseUrl": "https://supperapi.store/v1",
+        "baseUrl": "${MYPROVIDER_BASE_URL}",
         "apiKey": "${MYPROVIDER_API_KEY}",
         "api": "openai-completions",
         "models": [
