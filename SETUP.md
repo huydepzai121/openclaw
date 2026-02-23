@@ -419,6 +419,116 @@ docker compose exec openclaw openclaw cron add \
 - Chromium đã có sẵn trong image, không cần cài thêm
 - Browser tool tốn nhiều RAM hơn `web_fetch` — phù hợp cho trang cần JavaScript, không nên dùng cho mọi trang
 
+## Bước 10: Custom Skills & Sub-agents
+
+### Skills là gì?
+
+Skills là folder chứa file `SKILL.md`, dạy agent cách dùng tools hoặc thực hiện một tác vụ cụ thể. Mỗi skill là một "bài hướng dẫn" mà agent đọc khi cần — giống như SOP (Standard Operating Procedure).
+
+Skills được đặt trong `workspace/skills/`:
+
+```
+workspace/skills/
+├── msc-checker/
+│   └── SKILL.md        # Hướng dẫn kiểm tra mua sắm công
+├── another-skill/
+│   └── SKILL.md
+```
+
+### Sub-agents là gì?
+
+Sub-agents là các agent session chạy nền (background), được spawn qua `sessions_spawn`. Mỗi sub-agent chạy isolated — có context riêng, không ảnh hưởng session chính. Phù hợp cho tác vụ nặng hoặc chạy song song.
+
+### Skill msc-checker
+
+Skill `msc-checker` đã được tạo sẵn trong `workspace/skills/msc-checker/`. Skill này hướng dẫn agent dùng browser tool để kiểm tra thông tin mới từ muasamcong.mpi.gov.vn.
+
+### Cấu hình sub-agents
+
+Config sub-agents đã được thêm vào `config/openclaw.json`:
+
+```json
+{
+  "agents": {
+    "defaults": {
+      "subagents": {
+        "maxSpawnDepth": 2,
+        "maxConcurrent": 3,
+        "maxChildrenPerAgent": 3
+      }
+    }
+  },
+  "sessions": {
+    "spawn": {
+      "enabled": true
+    }
+  }
+}
+```
+
+### Test sub-agents
+
+```bash
+# Liệt kê sub-agents đang chạy
+docker compose exec openclaw openclaw subagents list
+
+# Spawn sub-agent chạy skill msc-checker
+docker compose exec openclaw openclaw subagents spawn msc "Kiểm tra MSC"
+```
+
+### Tạo skill mới
+
+1. Tạo folder trong `workspace/skills/`:
+
+```bash
+mkdir -p workspace/skills/ten-skill
+```
+
+2. Viết file `SKILL.md` trong folder đó:
+
+```markdown
+# Skill: Tên Skill
+
+Mô tả ngắn skill làm gì.
+
+## Khi nào dùng
+- Điều kiện 1
+- Điều kiện 2
+
+## Cách thực hiện
+1. Bước 1
+2. Bước 2
+3. Bước 3
+
+## Lưu ý
+- Lưu ý quan trọng
+```
+
+Agent sẽ tự đọc `SKILL.md` khi cần thực hiện tác vụ liên quan.
+
+### Cập nhật cron MSC dùng skill
+
+Cron mua sắm công ở Bước 9 có thể đơn giản hóa message nhờ skill. Xóa cron cũ và thêm cron mới:
+
+```bash
+# Xóa cron cũ
+docker compose exec openclaw openclaw cron list
+docker compose exec openclaw openclaw cron remove <ID_CRON_MUASAMCONG>
+
+# Thêm cron mới — message ngắn gọn, agent tự đọc skill
+docker compose exec openclaw openclaw cron add \
+  --name "Rà soát muasamcong tuần (skill)" \
+  --cron "0 8 * * 1" \
+  --tz "Asia/Ho_Chi_Minh" \
+  --session isolated \
+  --message "Dùng skill msc-checker để kiểm tra MSC tuần này" \
+  --announce \
+  --channel telegram \
+  --to "<TELEGRAM_CHAT_ID>"
+```
+
+Message chỉ cần 1 dòng — toàn bộ hướng dẫn chi tiết đã nằm trong `workspace/skills/msc-checker/SKILL.md`.
+
 ## Cấu trúc project
 
 ```
@@ -438,6 +548,9 @@ openclaw/
     ├── knowledge/           # Tài liệu train cho AI
     │   ├── phapluat-sources.md   # Nguồn văn bản pháp luật
     │   └── muasamcong-guide.md   # Hướng dẫn mua sắm công
+    ├── skills/              # Custom skills cho agent
+    │   └── msc-checker/     # Skill kiểm tra mua sắm công
+    │       └── SKILL.md
     └── memory/              # Lưu lịch sử tin tức, pháp luật
 ```
 
