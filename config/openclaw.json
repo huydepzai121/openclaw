@@ -22,10 +22,14 @@
     }
   },
   "tools": {
+    "browser": {
+      "enabled": true
+    },
     "web": {
       "search": { "enabled": true },
       "fetch": { "enabled": true }
-    }
+    },
+    "allow": ["browser", "group:ui"]
   },
   "channels": {
     "telegram": {
