@@ -363,6 +363,62 @@ docker compose exec openclaw openclaw cron add \
 
 Thay `<TELEGRAM_CHAT_ID>` bằng Chat ID của bạn.
 
+## Bước 9: Browser Automation (cho trang Vue.js/Liferay)
+
+### Browser tool là gì?
+
+OpenClaw có built-in browser tool — dùng Chromium headless + Chrome DevTools Protocol (CDP). Bot có thể mở trang web, tương tác (click, điền form), chụp snapshot, và đọc nội dung DOM — giống như người dùng thật mở trình duyệt.
+
+### Tại sao cần browser?
+
+Một số trang như `muasamcong.mpi.gov.vn` dùng Vue.js/Liferay, nội dung được render bằng JavaScript (popup, bảng dữ liệu load động). Tool `web_fetch` chỉ đọc HTML tĩnh — không thấy nội dung JavaScript render. Browser tool giải quyết vấn đề này bằng cách chạy trình duyệt thật.
+
+### Cấu hình đã sẵn sàng
+
+- **openclaw.json**: Browser đã được bật (`tools.browser.enabled: true`)
+- **Dockerfile.godmode**: Chromium đã được cài sẵn (Layer 4: Browser — Chromium headless + CDP)
+- Không cần cấu hình thêm gì
+
+### Test browser sau khi rebuild
+
+```bash
+# Rebuild container (nếu chưa có Chromium)
+docker compose down && docker compose up -d --build
+
+# Test browser tool trong container
+docker compose exec openclaw openclaw chat \
+  --message "Dùng browser tool mở https://muasamcong.mpi.gov.vn/web/guest/home, chụp snapshot, và mô tả nội dung trang"
+```
+
+Nếu bot trả về mô tả nội dung trang (menu, bảng thông báo, v.v.) → browser hoạt động OK.
+
+### Cập nhật cron mua sắm công để dùng browser
+
+Cron cũ ở Bước 8 dùng `web_fetch` — không đọc được nội dung JavaScript. Xóa cron cũ và thêm cron mới với message yêu cầu dùng browser tool:
+
+```bash
+# Xóa cron cũ
+docker compose exec openclaw openclaw cron list
+docker compose exec openclaw openclaw cron remove <ID_CRON_MUASAMCONG>
+
+# Thêm cron mới — dùng browser tool
+docker compose exec openclaw openclaw cron add \
+  --name "Rà soát muasamcong tuần (browser)" \
+  --cron "0 8 * * 1" \
+  --tz "Asia/Ho_Chi_Minh" \
+  --session isolated \
+  --message "Bạn là chuyên gia theo dõi hệ thống mua sắm công Việt Nam. Đọc file workspace/knowledge/muasamcong-guide.md để biết context. QUAN TRỌNG: Dùng browser tool (không dùng web_fetch) để mở trang muasamcong.mpi.gov.vn vì trang này dùng JavaScript render. Mở https://muasamcong.mpi.gov.vn/web/guest/home, chụp snapshot, đọc nội dung. Tìm: (1) Thông báo hệ thống mới, (2) Thay đổi quy trình đấu thầu/mua sắm công, (3) Hướng dẫn mới cho nhà thầu/bên mời thầu, (4) Văn bản pháp luật liên quan đấu thầu. Tóm tắt rõ ràng, ghi ngày và nguồn. So sánh với quy trình cũ nếu có thay đổi. Lưu vào file workspace/memory/muasamcong-\$(date +%Y-%W).md. Format đẹp cho Telegram, dùng emoji. Viết bằng tiếng Việt." \
+  --announce \
+  --channel telegram \
+  --to "<TELEGRAM_CHAT_ID>"
+```
+
+### Lưu ý
+
+- Browser chạy headless trong Docker — không cần display hay GUI
+- Chromium đã có sẵn trong image, không cần cài thêm
+- Browser tool tốn nhiều RAM hơn `web_fetch` — phù hợp cho trang cần JavaScript, không nên dùng cho mọi trang
+
 ## Cấu trúc project
 
 ```
