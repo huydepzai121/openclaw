@@ -42,6 +42,12 @@
       "enabled": true,
       "botToken": "${ZALO_BOT_TOKEN}",
       "dmPolicy": "pairing"
+    },
+    "slack": {
+      "enabled": true,
+      "appToken": "${SLACK_APP_TOKEN}",
+      "botToken": "${SLACK_BOT_TOKEN}",
+      "mode": "socket"
     }
   },
   "gateway": {

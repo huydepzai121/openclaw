@@ -28,6 +28,8 @@ services:
       - NODE_ENV=production
       - OPENCLAW_GATEWAY_TOKEN=local-dev-token
       - ZALO_BOT_TOKEN=${ZALO_BOT_TOKEN}
+      - SLACK_APP_TOKEN=${SLACK_APP_TOKEN}
+      - SLACK_BOT_TOKEN=${SLACK_BOT_TOKEN}
     env_file:
       - .env
 
