@@ -30,8 +30,8 @@ Các biến cần điền:
 | BRAVE_API_KEY | Key cho web search | https://brave.com/search/api/ |
 | TELEGRAM_CHAT_ID | Chat ID nhận tin tức (điền sau khi pairing) | Nhắn @userinfobot trên Telegram |
 | ZALO_BOT_TOKEN | Token bot Zalo | https://bot.zaloplatforms.com |
-| `SLACK_APP_TOKEN` | App-level token cho Slack (xapp-...) | https://api.slack.com/apps > Basic Information > App-Level Tokens |
-| `SLACK_BOT_TOKEN` | Bot User OAuth Token (xoxb-...) | https://api.slack.com/apps > OAuth & Permissions |
+| SLACK_APP_TOKEN | App-level token cho Slack (xapp-...) | https://api.slack.com/apps > Basic Information > App-Level Tokens |
+| SLACK_BOT_TOKEN | Bot User OAuth Token (xoxb-...) | https://api.slack.com/apps > OAuth & Permissions |
 
 ## Bước 2: Build và chạy container
 
@@ -63,9 +63,9 @@ docker compose logs -f
 docker compose exec openclaw openclaw pairing approve telegram <MÃ_PAIRING>
 ```
 
-1. Lấy Chat ID — nhắn `/start` cho @userinfobot trên Telegram, copy ID
-2. Điền `TELEGRAM_CHAT_ID=<ID>` vào `.env`
-3. Restart: `docker compose restart`
+4. Lấy Chat ID — nhắn `/start` cho @userinfobot trên Telegram, copy ID
+5. Điền `TELEGRAM_CHAT_ID=<ID>` vào `.env`
+6. Restart: `docker compose restart`
 
 ## Bước 4: Kết nối Zalo
 
@@ -75,15 +75,15 @@ docker compose exec openclaw openclaw pairing approve telegram <MÃ_PAIRING>
 docker compose exec openclaw openclaw plugins install @openclaw/zalo
 ```
 
-1. Nếu gặp lỗi `Cannot find module 'zod'`:
+2. Nếu gặp lỗi `Cannot find module 'zod'`:
 
 ```bash
 docker compose exec openclaw bash -c "cd /home/claw/.openclaw/extensions/zalo && npm install zod"
 docker compose restart
 ```
 
-1. Nhắn tin cho bot qua Zalo
-2. Approve pairing:
+3. Nhắn tin cho bot qua Zalo
+4. Approve pairing:
 
 ```bash
 docker compose exec openclaw openclaw pairing approve zalo <MÃ_PAIRING>
