@@ -37,6 +37,11 @@
           "requireMention": false
         }
       }
+    },
+    "zalo": {
+      "enabled": true,
+      "botToken": "${ZALO_BOT_TOKEN}",
+      "dmPolicy": "pairing"
     }
   },
   "gateway": {
@@ -46,6 +51,9 @@
   "plugins": {
     "entries": {
       "telegram": {
+        "enabled": true
+      },
+      "zalo": {
         "enabled": true
       }
     }

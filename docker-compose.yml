@@ -27,6 +27,7 @@ services:
       - TELEGRAM_BOT_TOKEN=${TELEGRAM_BOT_TOKEN}
       - NODE_ENV=production
       - OPENCLAW_GATEWAY_TOKEN=local-dev-token
+      - ZALO_BOT_TOKEN=${ZALO_BOT_TOKEN}
     env_file:
       - .env
 
