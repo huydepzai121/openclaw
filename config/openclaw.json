@@ -6,8 +6,7 @@
         "apiKey": "${MYPROVIDER_API_KEY}",
         "api": "openai-completions",
         "models": [
-          { "id": "claude-opus-4-6", "name": "claude-opus-4-6" },
-          { "id": "claude-sonnet-4-5-20250929", "name": "claude-sonnet-4-5-20250929" }
+          { "id": "claude-opus-4-6", "name": "claude-opus-4-6" }
         ]
       }
     }
@@ -15,7 +14,7 @@
   "agents": {
     "defaults": {
        "model": {
-         "primary": "myprovider/claude-sonnet-4-5-20250929"
+         "primary": "myprovider/claude-opus-4-6"
        },
       "sandbox": {
         "mode": "off"
