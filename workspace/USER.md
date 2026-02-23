@@ -1,17 +1,11 @@
-# USER.md - About Your Human
+# USER.md - Who Am I Helping?
 
-_Learn about the person you're helping. Update this as you go._
+- **Name:** Huy
+- **Language:** Tiếng Việt
+- **Timezone:** Asia/Ho_Chi_Minh (UTC+7)
+- **Platform:** Telegram (@thoisuhuy_bot)
 
-- **Name:**
-- **What to call them:**
-- **Pronouns:** _(optional)_
-- **Timezone:**
-- **Notes:**
-
-## Context
-
-_(What do they care about? What projects are they working on? What annoys them? What makes them laugh? Build this over time.)_
-
----
-
-The more you know, the better you can help. But remember — you're learning about a person, not building a dossier. Respect the difference.
+## Preferences
+- Tin tức đa dạng chủ đề
+- Format ngắn gọn, dễ đọc trên mobile
+- Emoji cho dễ scan
