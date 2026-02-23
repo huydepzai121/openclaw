@@ -239,6 +239,130 @@ docker compose restart
 - Hoặc invite bot vào channel: `/invite @tên-bot`
 - Mention bot: `@tên-bot câu hỏi`
 
+## Bước 7: Train tài liệu cho AI
+
+Bot OpenClaw đọc tất cả files trong `workspace/` trước khi trả lời. Đây là cách "train" bot theo kiến thức riêng — không cần code, chỉ cần viết file.
+
+### Cơ chế hoạt động
+
+- Bot đọc files trong `workspace/` mỗi khi bắt đầu session mới
+- Thay đổi file → bot tự đọc lại lần chat tiếp theo (không cần restart container)
+- Files quan trọng nhất: `SOUL.md` (tính cách), `IDENTITY.md` (vai trò), `knowledge/` (kiến thức)
+
+### Tạo knowledge files
+
+Tạo thư mục `workspace/knowledge/` và thêm file `.md` cho mỗi chủ đề:
+
+```bash
+mkdir -p workspace/knowledge
+```
+
+Ví dụ cấu trúc:
+
+```
+workspace/knowledge/
+├── phapluat-sources.md      # Nguồn văn bản pháp luật VN
+├── muasamcong-guide.md      # Hướng dẫn hệ thống mua sắm công
+├── san-pham.md              # Catalog sản phẩm/dịch vụ
+├── faq.md                   # Câu hỏi thường gặp
+└── quy-trinh.md             # Quy trình nội bộ
+```
+
+### Các loại tài liệu có thể train
+
+| Loại | Mô tả | Ví dụ |
+| --- | --- | --- |
+| Nguồn tin | URLs đáng tin cậy, cách search | Danh sách website pháp luật VN |
+| FAQ | Câu hỏi thường gặp + trả lời | FAQ sản phẩm, chính sách |
+| Quy trình | Hướng dẫn step-by-step | Quy trình đấu thầu, mua hàng |
+| Catalog | Bảng giá, mô tả sản phẩm | Danh mục sản phẩm + giá |
+| Hướng dẫn trả lời | Cách bot nên respond | Tone, style, từ ngữ cần dùng |
+| Kiến thức chuyên ngành | Domain knowledge | Luật đấu thầu, quy định thuế |
+
+### Tips viết knowledge file hiệu quả
+
+- **Structured > Free-form** — dùng headings, bullet points, tables
+- **Cụ thể > Chung chung** — "Giá sản phẩm A: 500.000đ" tốt hơn "giá hợp lý"
+- **Ghi rõ quy tắc** — dùng `QUAN TRỌNG:` hoặc `⚠️` cho thông tin bot PHẢI tuân thủ
+- **Cập nhật thường xuyên** — kiến thức cũ = trả lời sai
+- **Một chủ đề/file** — dễ quản lý, dễ cập nhật
+
+### Ví dụ knowledge file
+
+```markdown
+# Sản phẩm công ty ABC
+
+## Danh mục sản phẩm
+
+| Sản phẩm | Giá | Mô tả |
+| --- | --- | --- |
+| Gói Basic | 500.000đ/tháng | 10 users, 5GB storage |
+| Gói Pro | 1.500.000đ/tháng | 50 users, 50GB storage |
+| Gói Enterprise | Liên hệ | Unlimited |
+
+## QUAN TRỌNG: Quy tắc trả lời
+
+- Luôn hỏi nhu cầu khách trước khi tư vấn gói
+- Không bao giờ giảm giá — chỉ có chương trình khuyến mãi theo mùa
+- Nếu khách hỏi về Enterprise, yêu cầu để lại SĐT để sales liên hệ
+```
+
+### Tùy chỉnh tính cách bot
+
+Sửa `workspace/SOUL.md` để thay đổi cách bot giao tiếp:
+
+```markdown
+# SOUL.md
+Bạn là trợ lý tư vấn chuyên nghiệp của công ty ABC.
+- Giọng điệu: thân thiện, chuyên nghiệp
+- Luôn xưng "em", gọi khách là "anh/chị"
+- Trả lời ngắn gọn, đi thẳng vào vấn đề
+- Nếu không biết, nói "Em sẽ kiểm tra và phản hồi lại ạ"
+```
+
+Sửa `workspace/IDENTITY.md` để thay đổi vai trò:
+
+```markdown
+# IDENTITY.md
+Tên: Trợ lý ABC
+Vai trò: Tư vấn sản phẩm và hỗ trợ khách hàng
+Công ty: ABC Corp
+```
+
+## Bước 8: Setup cron rà soát pháp luật & mua sắm công (tùy chọn)
+
+2 cron jobs chạy thứ 2 hàng tuần, 8h sáng giờ VN. Bot sẽ search + tổng hợp + so sánh điểm mới vs cũ.
+
+### 📜 Rà soát văn bản pháp luật
+
+```bash
+docker compose exec openclaw openclaw cron add \
+  --name "Rà soát văn bản pháp luật tuần" \
+  --cron "0 8 * * 1" \
+  --tz "Asia/Ho_Chi_Minh" \
+  --session isolated \
+  --message "Bạn là chuyên gia rà soát văn bản pháp luật Việt Nam. Đọc file workspace/knowledge/phapluat-sources.md để biết nguồn tin đáng tin cậy. Hãy search các văn bản pháp luật mới được ban hành hoặc có hiệu lực trong tuần vừa qua (Nghị định, Thông tư, Quyết định, Luật, Nghị quyết). Tất cả lĩnh vực: đấu thầu, đầu tư công, thuế, doanh nghiệp, lao động, bất động sản, chứng khoán, ngân hàng. Với mỗi văn bản: ghi rõ số hiệu, ngày ban hành, cơ quan ban hành, tóm tắt nội dung chính, và ĐIỂM MỚI THAY ĐỔI so với quy định cũ. Lưu vào file workspace/memory/phapluat-\$(date +%Y-%W).md. Format đẹp cho Telegram, dùng emoji. Viết bằng tiếng Việt." \
+  --announce \
+  --channel telegram \
+  --to "<TELEGRAM_CHAT_ID>"
+```
+
+### 🏛️ Rà soát thông báo mua sắm công
+
+```bash
+docker compose exec openclaw openclaw cron add \
+  --name "Rà soát muasamcong tuần" \
+  --cron "0 8 * * 1" \
+  --tz "Asia/Ho_Chi_Minh" \
+  --session isolated \
+  --message "Bạn là chuyên gia theo dõi hệ thống mua sắm công Việt Nam. Đọc file workspace/knowledge/muasamcong-guide.md để biết context. Hãy search thông tin mới nhất từ muasamcong.mpi.gov.vn trong tuần vừa qua. Focus: (1) Thông báo hệ thống mới, (2) Thay đổi quy trình đấu thầu/mua sắm công, (3) Hướng dẫn mới cho nhà thầu/bên mời thầu, (4) Văn bản pháp luật liên quan đấu thầu. Tóm tắt rõ ràng, ghi ngày và nguồn. So sánh với quy trình cũ nếu có thay đổi. Lưu vào file workspace/memory/muasamcong-\$(date +%Y-%W).md. Format đẹp cho Telegram, dùng emoji. Viết bằng tiếng Việt." \
+  --announce \
+  --channel telegram \
+  --to "<TELEGRAM_CHAT_ID>"
+```
+
+Thay `<TELEGRAM_CHAT_ID>` bằng Chat ID của bạn.
+
 ## Cấu trúc project
 
 ```
@@ -255,7 +379,10 @@ openclaw/
     ├── USER.md              # User info
     ├── SOUL.md              # Bot personality
     ├── AGENTS.md            # Agent rules
-    └── memory/              # Lưu lịch sử tin tức
+    ├── knowledge/           # Tài liệu train cho AI
+    │   ├── phapluat-sources.md   # Nguồn văn bản pháp luật
+    │   └── muasamcong-guide.md   # Hướng dẫn mua sắm công
+    └── memory/              # Lưu lịch sử tin tức, pháp luật
 ```
 
 ## Lệnh thường dùng
