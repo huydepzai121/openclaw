@@ -9,6 +9,7 @@ services:
       dockerfile: Dockerfile.godmode
     container_name: openclaw-godmode
     restart: unless-stopped
+    shm_size: '2gb'
     ports:
       - "3000:3000"    # Gateway HTTP
       - "18789:18789"  # WebSocket control plane
