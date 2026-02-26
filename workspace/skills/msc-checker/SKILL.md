@@ -1,127 +1,89 @@
 ---
 name: msc-checker
-description: Kiểm tra thông báo mới trên muasamcong.mpi.gov.vn bằng browser tool. Đọc popup thông báo, danh sách thông báo, và tổng hợp kết quả.
-metadata: {"openclaw": {"requires": {"config": ["browser.enabled"]}, "emoji": "🏛️"}}
+description: Kiểm tra thông báo mới trên muasamcong.mpi.gov.vn bằng MCP tools (web_fetch, web_search, exec curl). Gọi API trực tiếp, fetch trang thông báo, và tổng hợp kết quả.
+metadata: {"openclaw": {"emoji": "🏛️"}}
 ---
 
 # 🏛️ MSC Checker — Kiểm tra thông báo Mua sắm công
 
 ## Context
 
-Hệ thống muasamcong.mpi.gov.vn (MSC) chạy trên **Liferay Portal + Vue.js**. Popup thông báo được load bằng JavaScript sau khi trang render xong — không thể đọc bằng `web_fetch` thông thường. Cần dùng **browser tool** (headless Chromium) để:
+Hệ thống muasamcong.mpi.gov.vn (MSC) có API JSON trả danh sách thông báo hệ thống. Skill này dùng **MCP tools** (`web_fetch`, `web_search`, `exec curl`) — không cần browser.
 
-- Đợi JS render popup
-- Đọc nội dung popup thông báo
-- Navigate đến trang danh sách thông báo
-- Extract dữ liệu
+Chiến lược: API trước, web_fetch HTML sau, web_search bổ sung.
 
 ## Step-by-step Flow
 
-### Bước 1: Kiểm tra & khởi động browser
+### Bước 1: Gọi API lấy danh sách thông báo
 
-```
-browser → status
-```
+Dùng `exec` để gọi API trực tiếp:
 
-Nếu browser chưa chạy:
-
-```
-browser → start
-```
-
-### Bước 2: Mở trang chủ MSC
-
-```
-browser → open url=https://muasamcong.mpi.gov.vn/web/guest/home
+```bash
+curl -s -X POST \
+  'https://muasamcong.mpi.gov.vn/o/egp-portal-notification-system/services/get-list' \
+  -H 'Content-Type: application/json' \
+  -d '{"page": 1, "pageSize": 10}'
 ```
 
-**Đợi 5 giây** để JS load xong (MSC cần thời gian render popup):
-
-```
-browser → act action=wait time=5000
-```
-
-### Bước 3: Đọc popup thông báo
-
-```
-browser → snapshot mode=ai
-```
-
-Đọc kỹ snapshot output:
-- Tìm popup/modal/dialog chứa thông báo hệ thống
-- Ghi lại nội dung thông báo (tiêu đề, nội dung, ngày)
-- Nếu **KHÔNG thấy popup** → bỏ qua, chuyển Bước 5
-
-### Bước 4: Xử lý popup (nếu có)
-
-Đọc nội dung popup xong, đóng popup bằng cách click nút phù hợp:
-
-```
-browser → act action=click ref=<ref_number>
-```
-
-Tìm nút có text: **"Bỏ qua"**, **"Đã nhận thông tin"**, **"Đóng"**, hoặc **"×"**.
-
-> ⚠️ `ref` lấy từ snapshot ở Bước 3 — KHÔNG dùng CSS selector.
-
-### Bước 5: Navigate đến trang thông báo hệ thống
-
-```
-browser → navigate url=https://muasamcong.mpi.gov.vn/web/guest/notification-system
-```
-
-Đợi load:
-
-```
-browser → act action=wait time=3000
-```
-
-### Bước 6: Đọc danh sách thông báo
-
-```
-browser → snapshot mode=ai
-```
-
-Extract từ snapshot:
+Response là JSON chứa danh sách thông báo. Extract:
 - Tiêu đề thông báo
 - Ngày đăng
-- Nội dung tóm tắt (nếu có)
+- Nội dung tóm tắt
 - Phân loại: bảo trì / nâng cấp / thay đổi quy trình / hướng dẫn mới
 
-### Bước 7: Chụp bằng chứng
+> ⚠️ Nếu API trả lỗi hoặc yêu cầu auth → chuyển Bước 2.
+
+### Bước 2: Fetch trang thông báo bằng web_fetch
+
+Nếu API fail, dùng `web_fetch` để đọc HTML trang thông báo:
 
 ```
-browser → screenshot
+web_fetch → url=https://muasamcong.mpi.gov.vn/web/guest/thong-bao
 ```
 
-Lưu screenshot path để đính kèm khi gửi báo cáo.
+Đọc HTML trả về, tìm:
+- Danh sách thông báo trong DOM (thường nằm trong `<div>` hoặc `<table>`)
+- Tiêu đề, ngày, link chi tiết
 
-## Backup Plan — Khi browser không khả dụng
+Nếu trang thông báo không có data (do JS render) → chuyển Bước 3.
 
-Nếu browser fail hoặc không available, thử gọi API trực tiếp:
+### Bước 3: Fetch trang chủ MSC
 
 ```
-POST https://muasamcong.mpi.gov.vn/o/egp-portal-notification-system/services/get-list
-Content-Type: application/json
-
-{
-  "page": 1,
-  "pageSize": 10
-}
+web_fetch → url=https://muasamcong.mpi.gov.vn/web/guest/home
 ```
 
-Dùng `web_fetch` hoặc `exec curl` để gọi. Response sẽ là JSON với danh sách thông báo.
+Đọc HTML trang chủ, tìm:
+- Banner thông báo hệ thống
+- Link đến thông báo mới
+- Nội dung tĩnh về bảo trì / nâng cấp
 
-> ⚠️ API có thể yêu cầu auth hoặc thay đổi — browser là phương án chính.
+### Bước 4: Bổ sung bằng web_search
+
+Dùng `web_search` để tìm thông báo mới nhất:
+
+```
+web_search → query="thông báo" site:muasamcong.mpi.gov.vn
+```
+
+Các query bổ sung nếu cần:
+- `muasamcong bảo trì hệ thống 2026`
+- `muasamcong thay đổi quy trình đấu thầu`
+- `hệ thống đấu thầu điện tử thông báo mới`
+
+### Bước 5: Tổng hợp kết quả
+
+Gộp dữ liệu từ các bước trên:
+1. Ưu tiên dữ liệu từ API (Bước 1) — chính xác nhất
+2. Bổ sung từ web_fetch (Bước 2-3) — nếu API fail
+3. Cross-check với web_search (Bước 4) — bắt thông tin bên ngoài MSC
 
 ## Output Format — Báo cáo Telegram
 
 ```
 🏛️ **THÔNG BÁO MUA SẮM CÔNG**
 📅 Cập nhật: {ngày giờ}
-
-📢 **Popup thông báo:**
-{nội dung popup hoặc "Không có popup mới"}
+📡 Nguồn: {API / web_fetch / web_search}
 
 📋 **Danh sách thông báo gần đây:**
 1. 📌 {tiêu đề} — {ngày}
@@ -130,7 +92,7 @@ Dùng `web_fetch` hoặc `exec curl` để gọi. Response sẽ là JSON với d
    {tóm tắt ngắn}
 ...
 
-🔗 Chi tiết: https://muasamcong.mpi.gov.vn/web/guest/notification-system
+🔗 Chi tiết: https://muasamcong.mpi.gov.vn/web/guest/thong-bao
 ```
 
 ## Lưu kết quả
@@ -138,7 +100,7 @@ Dùng `web_fetch` hoặc `exec curl` để gọi. Response sẽ là JSON với d
 Sau khi hoàn thành, lưu kết quả vào `workspace/memory/`:
 
 - File: `workspace/memory/msc-{YYYY-MM-DD}.md`
-- Ghi: ngày kiểm tra, popup content, danh sách thông báo, screenshot path
+- Ghi: ngày kiểm tra, nguồn dữ liệu (API/fetch/search), danh sách thông báo
 - Nếu file đã tồn tại (kiểm tra nhiều lần/ngày) → append thêm section mới với timestamp
 
 Ví dụ:
@@ -147,9 +109,8 @@ Ví dụ:
 # MSC Check — 2026-02-23
 
 ## 10:30 — Lần kiểm tra 1
-- Popup: Thông báo bảo trì ngày 25/02
+- Nguồn: API get-list
 - Thông báo mới: 3 mục
   1. ...
-- Screenshot: /path/to/screenshot.png
 ```
 
