@@ -371,7 +371,7 @@ MCP (Model Context Protocol) cho phép kết nối external tool servers vào Op
 
 ### Tại sao cần MCP?
 
-Built-in tools (web_search, web_fetch, browser) đủ cho nhiều tác vụ. Nhưng khi cần:
+Built-in tools (web_search, web_fetch) đủ cho nhiều tác vụ. Nhưng khi cần:
 - Truy cập file system ngoài workspace
 - Kết nối database, API bên thứ 3
 - Dùng tool đặc thù (GitHub, calendar, monitoring...)
@@ -389,7 +389,7 @@ Thêm `mcpServers` vào block `tools` trong `config/openclaw.json`:
       "search": { "enabled": true },
       "fetch": { "enabled": true }
     },
-    "allow": ["browser", "group:ui"],
+    "allow": ["group:ui"],
     "mcpServers": {
       "filesystem": {
         "command": "npx",
@@ -447,22 +447,22 @@ docker compose exec openclaw openclaw chat \
   --message "Liệt kê các tools bạn có thể dùng"
 ```
 
-### Cập nhật cron mua sắm công để dùng MCP (nếu có MCP phù hợp)
+### Cập nhật cron mua sắm công để dùng MCP
 
-Nếu bạn có MCP server cung cấp tool đọc trang web JavaScript (ví dụ: Playwright MCP), có thể cập nhật cron MSC:
+Xóa cron cũ và thêm cron mới với message dùng skill msc-checker:
 
 ```bash
 # Xóa cron cũ
 docker compose exec openclaw openclaw cron list
 docker compose exec openclaw openclaw cron remove <ID_CRON_MUASAMCONG>
 
-# Thêm cron mới — dùng MCP tool
+# Thêm cron mới — dùng skill msc-checker
 docker compose exec openclaw openclaw cron add \
   --name "Rà soát muasamcong tuần (MCP)" \
   --cron "0 8 * * 1" \
   --tz "Asia/Ho_Chi_Minh" \
   --session isolated \
-  --message "Bạn là chuyên gia theo dõi hệ thống mua sắm công Việt Nam. Đọc file workspace/knowledge/muasamcong-guide.md để biết context. Dùng tool phù hợp (browser hoặc MCP) để đọc nội dung từ muasamcong.mpi.gov.vn (trang dùng JavaScript render). Tìm: (1) Thông báo hệ thống mới, (2) Thay đổi quy trình đấu thầu/mua sắm công, (3) Hướng dẫn mới cho nhà thầu/bên mời thầu, (4) Văn bản pháp luật liên quan đấu thầu. Tóm tắt rõ ràng, ghi ngày và nguồn. So sánh với quy trình cũ nếu có thay đổi. Lưu vào file workspace/memory/muasamcong-\$(date +%Y-%W).md. Format đẹp cho Telegram, dùng emoji. Viết bằng tiếng Việt." \
+  --message "Dùng skill msc-checker để kiểm tra MSC tuần này" \
   --announce \
   --channel telegram \
   --to "<TELEGRAM_CHAT_ID>"
@@ -496,7 +496,7 @@ Sub-agents là các agent session chạy nền (background), được spawn qua 
 
 ### Skill msc-checker
 
-Skill `msc-checker` đã được tạo sẵn trong `workspace/skills/msc-checker/`. Skill này hướng dẫn agent dùng browser tool hoặc MCP tool để kiểm tra thông tin mới từ muasamcong.mpi.gov.vn.
+Skill `msc-checker` đã được tạo sẵn trong `workspace/skills/msc-checker/`. Skill này hướng dẫn agent dùng MCP tools để kiểm tra thông tin mới từ muasamcong.mpi.gov.vn.
 
 ### Cấu hình sub-agents
 
