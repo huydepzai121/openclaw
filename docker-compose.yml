@@ -20,6 +20,7 @@ services:
       - ./workspace:/home/claw/.openclaw/workspace
       # Config - mount to /tmp first, then copy in entrypoint
       - ./config/openclaw.json:/tmp/openclaw-config.json:ro
+      - ./config/mcp.json:/home/claw/.openclaw/mcp.json:ro
       # Docker socket — allows Docker CLI inside container
       - /var/run/docker.sock:/var/run/docker.sock
     environment:
