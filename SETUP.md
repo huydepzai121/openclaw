@@ -363,51 +363,106 @@ docker compose exec openclaw openclaw cron add \
 
 Thay `<TELEGRAM_CHAT_ID>` bằng Chat ID của bạn.
 
-## Bước 9: Browser Automation (cho trang Vue.js/Liferay)
+## Bước 9: MCP Server (mở rộng tools cho agent)
 
-### Browser tool là gì?
+### MCP là gì?
 
-OpenClaw có built-in browser tool — dùng Chromium headless + Chrome DevTools Protocol (CDP). Bot có thể mở trang web, tương tác (click, điền form), chụp snapshot, và đọc nội dung DOM — giống như người dùng thật mở trình duyệt.
+MCP (Model Context Protocol) cho phép kết nối external tool servers vào OpenClaw — agent dùng chúng như native tools. Format config tương thích Claude Desktop / Cursor — copy thẳng từ README của MCP server là chạy.
 
-### Tại sao cần browser?
+### Tại sao cần MCP?
 
-Một số trang như `muasamcong.mpi.gov.vn` dùng Vue.js/Liferay, nội dung được render bằng JavaScript (popup, bảng dữ liệu load động). Tool `web_fetch` chỉ đọc HTML tĩnh — không thấy nội dung JavaScript render. Browser tool giải quyết vấn đề này bằng cách chạy trình duyệt thật.
+Built-in tools (web_search, web_fetch, browser) đủ cho nhiều tác vụ. Nhưng khi cần:
+- Truy cập file system ngoài workspace
+- Kết nối database, API bên thứ 3
+- Dùng tool đặc thù (GitHub, calendar, monitoring...)
 
-### Cấu hình đã sẵn sàng
+→ MCP server giải quyết bằng cách thêm tools mà không cần sửa code OpenClaw.
 
-- **openclaw.json**: Browser đã được bật (`tools.browser.enabled: true`)
-- **Dockerfile.godmode**: Chromium đã được cài sẵn (Layer 4: Browser — Chromium headless + CDP)
-- Không cần cấu hình thêm gì
+### Cấu hình MCP trong openclaw.json
 
-### Test browser sau khi rebuild
+Thêm `mcpServers` vào block `tools` trong `config/openclaw.json`:
 
-```bash
-# Rebuild container (nếu chưa có Chromium)
-docker compose down && docker compose up -d --build
-
-# Test browser tool trong container
-docker compose exec openclaw openclaw chat \
-  --message "Dùng browser tool mở https://muasamcong.mpi.gov.vn/web/guest/home, chụp snapshot, và mô tả nội dung trang"
+```json
+{
+  "tools": {
+    "web": {
+      "search": { "enabled": true },
+      "fetch": { "enabled": true }
+    },
+    "allow": ["browser", "group:ui"],
+    "mcpServers": {
+      "filesystem": {
+        "command": "npx",
+        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/claw/data"]
+      },
+      "my-remote-mcp": {
+        "url": "https://example.com/mcp/",
+        "headers": {
+          "Authorization": "Bearer <TOKEN>"
+        }
+      }
+    }
+  }
+}
 ```
 
-Nếu bot trả về mô tả nội dung trang (menu, bảng thông báo, v.v.) → browser hoạt động OK.
+Hai transport modes:
 
-### Cập nhật cron mua sắm công để dùng browser
+| Mode | Config | Ví dụ |
+| --- | --- | --- |
+| Stdio | `command` + `args` | Process local qua npx / uvx |
+| HTTP | `url` + `headers` (tùy chọn) | Remote endpoint |
 
-Cron cũ ở Bước 8 dùng `web_fetch` — không đọc được nội dung JavaScript. Xóa cron cũ và thêm cron mới với message yêu cầu dùng browser tool:
+Dùng `toolTimeout` để tăng timeout (mặc định 30s) cho server chậm:
+
+```json
+{
+  "tools": {
+    "mcpServers": {
+      "my-slow-server": {
+        "url": "https://example.com/mcp/",
+        "toolTimeout": 120
+      }
+    }
+  }
+}
+```
+
+### Restart sau khi thêm MCP
+
+```bash
+docker compose restart
+```
+
+MCP tools tự động được discover và register khi gateway khởi động. Agent dùng chúng cùng built-in tools — không cần config thêm.
+
+### Test MCP
+
+```bash
+# Kiểm tra status — MCP servers sẽ hiện trong danh sách tools
+docker compose exec openclaw openclaw status
+
+# Test với agent
+docker compose exec openclaw openclaw chat \
+  --message "Liệt kê các tools bạn có thể dùng"
+```
+
+### Cập nhật cron mua sắm công để dùng MCP (nếu có MCP phù hợp)
+
+Nếu bạn có MCP server cung cấp tool đọc trang web JavaScript (ví dụ: Playwright MCP), có thể cập nhật cron MSC:
 
 ```bash
 # Xóa cron cũ
 docker compose exec openclaw openclaw cron list
 docker compose exec openclaw openclaw cron remove <ID_CRON_MUASAMCONG>
 
-# Thêm cron mới — dùng browser tool
+# Thêm cron mới — dùng MCP tool
 docker compose exec openclaw openclaw cron add \
-  --name "Rà soát muasamcong tuần (browser)" \
+  --name "Rà soát muasamcong tuần (MCP)" \
   --cron "0 8 * * 1" \
   --tz "Asia/Ho_Chi_Minh" \
   --session isolated \
-  --message "Bạn là chuyên gia theo dõi hệ thống mua sắm công Việt Nam. Đọc file workspace/knowledge/muasamcong-guide.md để biết context. QUAN TRỌNG: Dùng browser tool (không dùng web_fetch) để mở trang muasamcong.mpi.gov.vn vì trang này dùng JavaScript render. Mở https://muasamcong.mpi.gov.vn/web/guest/home, chụp snapshot, đọc nội dung. Tìm: (1) Thông báo hệ thống mới, (2) Thay đổi quy trình đấu thầu/mua sắm công, (3) Hướng dẫn mới cho nhà thầu/bên mời thầu, (4) Văn bản pháp luật liên quan đấu thầu. Tóm tắt rõ ràng, ghi ngày và nguồn. So sánh với quy trình cũ nếu có thay đổi. Lưu vào file workspace/memory/muasamcong-\$(date +%Y-%W).md. Format đẹp cho Telegram, dùng emoji. Viết bằng tiếng Việt." \
+  --message "Bạn là chuyên gia theo dõi hệ thống mua sắm công Việt Nam. Đọc file workspace/knowledge/muasamcong-guide.md để biết context. Dùng tool phù hợp (browser hoặc MCP) để đọc nội dung từ muasamcong.mpi.gov.vn (trang dùng JavaScript render). Tìm: (1) Thông báo hệ thống mới, (2) Thay đổi quy trình đấu thầu/mua sắm công, (3) Hướng dẫn mới cho nhà thầu/bên mời thầu, (4) Văn bản pháp luật liên quan đấu thầu. Tóm tắt rõ ràng, ghi ngày và nguồn. So sánh với quy trình cũ nếu có thay đổi. Lưu vào file workspace/memory/muasamcong-\$(date +%Y-%W).md. Format đẹp cho Telegram, dùng emoji. Viết bằng tiếng Việt." \
   --announce \
   --channel telegram \
   --to "<TELEGRAM_CHAT_ID>"
@@ -415,9 +470,9 @@ docker compose exec openclaw openclaw cron add \
 
 ### Lưu ý
 
-- Browser chạy headless trong Docker — không cần display hay GUI
-- Chromium đã có sẵn trong image, không cần cài thêm
-- Browser tool tốn nhiều RAM hơn `web_fetch` — phù hợp cho trang cần JavaScript, không nên dùng cho mọi trang
+- MCP tools chạy với quyền của agent — cẩn thận khi kết nối server bên ngoài
+- Mỗi MCP server là 1 process riêng — nhiều server = tốn thêm RAM
+- Config format tương thích Claude Desktop / Cursor — copy paste được
 
 ## Bước 10: Custom Skills & Sub-agents
 
@@ -441,7 +496,7 @@ Sub-agents là các agent session chạy nền (background), được spawn qua 
 
 ### Skill msc-checker
 
-Skill `msc-checker` đã được tạo sẵn trong `workspace/skills/msc-checker/`. Skill này hướng dẫn agent dùng browser tool để kiểm tra thông tin mới từ muasamcong.mpi.gov.vn.
+Skill `msc-checker` đã được tạo sẵn trong `workspace/skills/msc-checker/`. Skill này hướng dẫn agent dùng browser tool hoặc MCP tool để kiểm tra thông tin mới từ muasamcong.mpi.gov.vn.
 
 ### Cấu hình sub-agents
 
@@ -508,7 +563,7 @@ Agent sẽ tự đọc `SKILL.md` khi cần thực hiện tác vụ liên quan.
 
 ### Cập nhật cron MSC dùng skill
 
-Cron mua sắm công ở Bước 9 có thể đơn giản hóa message nhờ skill. Xóa cron cũ và thêm cron mới:
+Cron mua sắm công ở Bước 8 hoặc Bước 9 có thể đơn giản hóa message nhờ skill. Xóa cron cũ và thêm cron mới:
 
 ```bash
 # Xóa cron cũ
