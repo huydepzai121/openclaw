@@ -1,6 +1,6 @@
 ---
 name: msc-checker
-description: Kiểm tra thông báo mới trên muasamcong.mpi.gov.vn bằng MCP tools (web_fetch, web_search, exec curl). Gọi API trực tiếp, fetch trang thông báo, và tổng hợp kết quả.
+description: Kiểm tra thông báo mới trên muasamcong.mpi.gov.vn bằng API trực tiếp (exec curl). Gọi API notification system, parse JSON, tổng hợp kết quả.
 metadata: {"openclaw": {"emoji": "🏛️"}}
 ---
 
@@ -8,109 +8,130 @@ metadata: {"openclaw": {"emoji": "🏛️"}}
 
 ## Context
 
-Hệ thống muasamcong.mpi.gov.vn (MSC) có API JSON trả danh sách thông báo hệ thống. Skill này dùng **MCP tools** (`web_fetch`, `web_search`, `exec curl`) — không cần browser.
+Hệ thống muasamcong.mpi.gov.vn (MSC) có API JSON nội bộ trả danh sách thông báo. Skill này dùng **exec curl** để gọi API trực tiếp — không cần browser, không cần MCP server.
 
-Chiến lược: API trước, web_fetch HTML sau, web_search bổ sung.
+Base URL: `https://muasamcong.mpi.gov.vn/o/egp-portal-notification-system/services`
+
+## Loại thông báo (notiType)
+
+| Code | Tên | Ưu tiên |
+|------|-----|---------|
+| 2 | Thông báo về Hệ thống | ⭐ Cao |
+| 3 | Lịch bảo trì hệ thống | ⭐ Cao |
+| 5 | Hành vi hạn chế cạnh tranh | ⭐ Cao |
+| 1 | Thông báo quản trị | Trung bình |
+| 4 | Thông báo về các khóa đào tạo | Thấp |
+| 6 | Thông báo khác | Thấp |
 
 ## Step-by-step Flow
 
-### Bước 1: Gọi API lấy danh sách thông báo
-
-Dùng `exec` để gọi API trực tiếp:
+### Bước 1: Lấy thông báo hệ thống (notiType=2)
 
 ```bash
 curl -s -X POST \
   'https://muasamcong.mpi.gov.vn/o/egp-portal-notification-system/services/get-list' \
   -H 'Content-Type: application/json' \
-  -d '{"page": 1, "pageSize": 10}'
+  -d '{"pageSize": 10, "pageNumber": 0, "commonNoti": {"notiType": "2"}}'
 ```
 
-Response là JSON chứa danh sách thông báo. Extract:
-- Tiêu đề thông báo
-- Ngày đăng
-- Nội dung tóm tắt
-- Phân loại: bảo trì / nâng cấp / thay đổi quy trình / hướng dẫn mới
+Response JSON: `page.content[]` chứa:
+- `title` — tiêu đề thông báo
+- `content` — nội dung (HTML, cần strip tags)
+- `createdDate` — ngày tạo
+- `startDate` — ngày bắt đầu
+- `viewCount` — lượt xem
+- `commonNotificationId` — UUID
+- `isAttachment` — có file đính kèm không
+- `docFilePath`, `docFileId` — thông tin file
 
-> ⚠️ Nếu API trả lỗi hoặc yêu cầu auth → chuyển Bước 2.
+### Bước 2: Lấy lịch bảo trì (notiType=3)
 
-### Bước 2: Fetch trang thông báo bằng web_fetch
-
-Nếu API fail, dùng `web_fetch` để đọc HTML trang thông báo:
-
-```
-web_fetch → url=https://muasamcong.mpi.gov.vn/web/guest/thong-bao
-```
-
-Đọc HTML trả về, tìm:
-- Danh sách thông báo trong DOM (thường nằm trong `<div>` hoặc `<table>`)
-- Tiêu đề, ngày, link chi tiết
-
-Nếu trang thông báo không có data (do JS render) → chuyển Bước 3.
-
-### Bước 3: Fetch trang chủ MSC
-
-```
-web_fetch → url=https://muasamcong.mpi.gov.vn/web/guest/home
+```bash
+curl -s -X POST \
+  'https://muasamcong.mpi.gov.vn/o/egp-portal-notification-system/services/get-list' \
+  -H 'Content-Type: application/json' \
+  -d '{"pageSize": 10, "pageNumber": 0, "commonNoti": {"notiType": "3"}}'
 ```
 
-Đọc HTML trang chủ, tìm:
-- Banner thông báo hệ thống
-- Link đến thông báo mới
-- Nội dung tĩnh về bảo trì / nâng cấp
+### Bước 3: Lấy thông báo hạn chế cạnh tranh (notiType=5)
 
-### Bước 4: Bổ sung bằng web_search
-
-Dùng `web_search` để tìm thông báo mới nhất:
-
-```
-web_search → query="thông báo" site:muasamcong.mpi.gov.vn
+```bash
+curl -s -X POST \
+  'https://muasamcong.mpi.gov.vn/o/egp-portal-notification-system/services/get-list' \
+  -H 'Content-Type: application/json' \
+  -d '{"pageSize": 5, "pageNumber": 0, "commonNoti": {"notiType": "5"}}'
 ```
 
-Các query bổ sung nếu cần:
+### Bước 4: Bổ sung bằng web_search (nếu cần)
+
+```
+web_search → query="thông báo mới" site:muasamcong.mpi.gov.vn
+```
+
+Các query bổ sung:
 - `muasamcong bảo trì hệ thống 2026`
 - `muasamcong thay đổi quy trình đấu thầu`
-- `hệ thống đấu thầu điện tử thông báo mới`
 
 ### Bước 5: Tổng hợp kết quả
 
-Gộp dữ liệu từ các bước trên:
-1. Ưu tiên dữ liệu từ API (Bước 1) — chính xác nhất
-2. Bổ sung từ web_fetch (Bước 2-3) — nếu API fail
-3. Cross-check với web_search (Bước 4) — bắt thông tin bên ngoài MSC
+1. Parse JSON từ Bước 1-3 — extract title, date, content (strip HTML tags)
+2. Sắp xếp theo ngày mới nhất
+3. Cross-check với web_search (Bước 4)
+4. Phân loại: bảo trì / nâng cấp / thay đổi quy trình / hướng dẫn mới
+
+> ⚠️ Content trong response là HTML — strip tags trước khi hiển thị. Ví dụ: `<p>Nội dung</p>` → `Nội dung`
 
 ## Output Format — Báo cáo Telegram
 
 ```
 🏛️ **THÔNG BÁO MUA SẮM CÔNG**
 📅 Cập nhật: {ngày giờ}
-📡 Nguồn: {API / web_fetch / web_search}
+📡 Nguồn: API muasamcong.mpi.gov.vn
 
-📋 **Danh sách thông báo gần đây:**
+📋 **Thông báo hệ thống:**
 1. 📌 {tiêu đề} — {ngày}
-   {tóm tắt ngắn}
+   {tóm tắt ngắn, max 2 dòng}
 2. 📌 {tiêu đề} — {ngày}
    {tóm tắt ngắn}
-...
+
+🔧 **Lịch bảo trì:**
+1. 🔧 {tiêu đề} — {ngày}
+   {chi tiết bảo trì}
+
+⚠️ **Hạn chế cạnh tranh:**
+1. ⚠️ {tiêu đề} — {ngày}
+   {tóm tắt}
 
 🔗 Chi tiết: https://muasamcong.mpi.gov.vn/web/guest/thong-bao
 ```
 
+Nếu không có thông báo mới → ghi rõ "Không có thông báo mới trong tuần qua."
+
+## Fallback khi API fail
+
+Nếu curl trả lỗi (timeout, 4xx, 5xx):
+
+1. Thử lại 1 lần sau 5 giây
+2. Nếu vẫn fail → dùng `web_search` với query: `"thông báo" site:muasamcong.mpi.gov.vn`
+3. Dùng `web_fetch` GET `https://muasamcong.mpi.gov.vn/web/guest/thong-bao` để đọc HTML
+4. Báo cho user: "API MSC không phản hồi, kết quả từ web search"
+
 ## Lưu kết quả
 
-Sau khi hoàn thành, lưu kết quả vào `workspace/memory/`:
+Sau khi hoàn thành, lưu vào `workspace/memory/`:
 
 - File: `workspace/memory/msc-{YYYY-MM-DD}.md`
-- Ghi: ngày kiểm tra, nguồn dữ liệu (API/fetch/search), danh sách thông báo
-- Nếu file đã tồn tại (kiểm tra nhiều lần/ngày) → append thêm section mới với timestamp
-
-Ví dụ:
+- Ghi: ngày kiểm tra, nguồn (API), danh sách thông báo theo loại
+- Nếu file đã tồn tại → append section mới với timestamp
 
 ```markdown
-# MSC Check — 2026-02-23
+# MSC Check — 2026-02-27
 
-## 10:30 — Lần kiểm tra 1
+## 10:30 — Kiểm tra tuần
 - Nguồn: API get-list
-- Thông báo mới: 3 mục
+- Thông báo hệ thống: 3 mục
   1. ...
+- Lịch bảo trì: 1 mục
+  1. ...
+- Hạn chế cạnh tranh: 0 mục
 ```
-
