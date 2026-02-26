@@ -363,93 +363,26 @@ docker compose exec openclaw openclaw cron add \
 
 Thay `<TELEGRAM_CHAT_ID>` bằng Chat ID của bạn.
 
-## Bước 9: MCP Server (mở rộng tools cho agent)
+## Bước 9: API Integration (cho trang không cần browser)
 
-### MCP là gì?
+### Cách tiếp cận
 
-MCP (Model Context Protocol) cho phép kết nối external tool servers vào OpenClaw — agent dùng chúng như native tools. Format config tương thích Claude Desktop / Cursor — copy thẳng từ README của MCP server là chạy.
+Nhiều trang web (ví dụ muasamcong.mpi.gov.vn) cung cấp API JSON trực tiếp. OpenClaw agent có thể gọi API bằng `exec curl` — không cần browser headless hay MCP server.
 
-### Tại sao cần MCP?
-
-Built-in tools (web_search, web_fetch) đủ cho nhiều tác vụ. Nhưng khi cần:
-- Truy cập file system ngoài workspace
-- Kết nối database, API bên thứ 3
-- Dùng tool đặc thù (GitHub, calendar, monitoring...)
-
-→ MCP server giải quyết bằng cách thêm tools mà không cần sửa code OpenClaw.
-
-### Cấu hình MCP trong openclaw.json
-
-Thêm `mcpServers` vào block `tools` trong `config/openclaw.json`:
-
-```json
-{
-  "tools": {
-    "web": {
-      "search": { "enabled": true },
-      "fetch": { "enabled": true }
-    },
-    "allow": ["group:ui"],
-    "mcpServers": {
-      "filesystem": {
-        "command": "npx",
-        "args": ["-y", "@modelcontextprotocol/server-filesystem", "/home/claw/data"]
-      },
-      "my-remote-mcp": {
-        "url": "https://example.com/mcp/",
-        "headers": {
-          "Authorization": "Bearer <TOKEN>"
-        }
-      }
-    }
-  }
-}
-```
-
-Hai transport modes:
-
-| Mode | Config | Ví dụ |
-| --- | --- | --- |
-| Stdio | `command` + `args` | Process local qua npx / uvx |
-| HTTP | `url` + `headers` (tùy chọn) | Remote endpoint |
-
-Dùng `toolTimeout` để tăng timeout (mặc định 30s) cho server chậm:
-
-```json
-{
-  "tools": {
-    "mcpServers": {
-      "my-slow-server": {
-        "url": "https://example.com/mcp/",
-        "toolTimeout": 120
-      }
-    }
-  }
-}
-```
-
-### Restart sau khi thêm MCP
+### Ví dụ: Gọi API Mua Sắm Công
 
 ```bash
-docker compose restart
+exec curl -s -X POST \
+  https://muasamcong.mpi.gov.vn/o/egp-portal-notification-system/services/get-list \
+  -H "Content-Type: application/json" \
+  -d '{"page": 1, "pageSize": 10}'
 ```
 
-MCP tools tự động được discover và register khi gateway khởi động. Agent dùng chúng cùng built-in tools — không cần config thêm.
+Agent parse JSON response trực tiếp — nhanh, ổn định, không phụ thuộc Chromium/Playwright.
 
-### Test MCP
+### Cron rà soát mua sắm công
 
-```bash
-# Kiểm tra status — MCP servers sẽ hiện trong danh sách tools
-docker compose exec openclaw openclaw status
-
-# Test với agent
-docker compose exec openclaw openclaw chat \
-  --message "Liệt kê các tools bạn có thể dùng"
-```
-
-### Cập nhật cron mua sắm công để dùng MCP
-
-Xóa cron cũ và thêm cron mới với message dùng skill msc-checker:
+Xóa cron cũ và thêm cron mới với skill msc-checker:
 
 ```bash
 # Xóa cron cũ
@@ -458,7 +391,7 @@ docker compose exec openclaw openclaw cron remove <ID_CRON_MUASAMCONG>
 
 # Thêm cron mới — dùng skill msc-checker
 docker compose exec openclaw openclaw cron add \
-  --name "Rà soát muasamcong tuần (MCP)" \
+  --name "Rà soát muasamcong tuần" \
   --cron "0 8 * * 1" \
   --tz "Asia/Ho_Chi_Minh" \
   --session isolated \
@@ -467,12 +400,6 @@ docker compose exec openclaw openclaw cron add \
   --channel telegram \
   --to "<TELEGRAM_CHAT_ID>"
 ```
-
-### Lưu ý
-
-- MCP tools chạy với quyền của agent — cẩn thận khi kết nối server bên ngoài
-- Mỗi MCP server là 1 process riêng — nhiều server = tốn thêm RAM
-- Config format tương thích Claude Desktop / Cursor — copy paste được
 
 ## Bước 10: Custom Skills & Sub-agents
 
