@@ -423,7 +423,7 @@ Sub-agents là các agent session chạy nền (background), được spawn qua 
 
 ### Skill msc-checker
 
-Skill `msc-checker` đã được tạo sẵn trong `workspace/skills/msc-checker/`. Skill này hướng dẫn agent dùng MCP tools để kiểm tra thông tin mới từ muasamcong.mpi.gov.vn.
+Skill `msc-checker` đã được tạo sẵn trong `workspace/skills/msc-checker/`. Skill này hướng dẫn agent dùng API trực tiếp (exec curl) để kiểm tra thông tin mới từ muasamcong.mpi.gov.vn.
 
 ### Cấu hình sub-agents
 
