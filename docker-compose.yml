@@ -1,5 +1,5 @@
 # OpenClaw God Mode - Single Container Setup
-# Gateway + Full Dev Environment + Browser + Docker CLI
+# Gateway + Full Dev Environment + Docker CLI
 # All Telegram users share this container
 
 services:
@@ -9,7 +9,7 @@ services:
       dockerfile: Dockerfile.godmode
     container_name: openclaw-godmode
     restart: unless-stopped
-    shm_size: '2gb'
+    shm_size: '256mb'
     ports:
       - "3000:3000"    # Gateway HTTP
       - "18789:18789"  # WebSocket control plane
