@@ -35,6 +35,16 @@ Things like:
 
 Skills are shared. Your setup is yours. Keeping them apart means you can update skills without losing your notes, and share skills without leaking your infrastructure.
 
+## OpenClaw Built-in Tools
+
+Các tool sau luôn có sẵn — không cần cấu hình thêm:
+
+| Tool | Key Param | Mô tả | Docs |
+|------|-----------|-------|------|
+| `exec` | `command` | Chạy shell commands (curl, jq, python, etc.). Sandboxing off by default. | https://docs.openclaw.ai/tools/exec |
+| `web_search` | `query` | Tìm kiếm web qua Brave/Perplexity/Gemini. | https://docs.openclaw.ai/tools/web |
+| `web_fetch` | `url` | HTTP GET + trích xuất nội dung (HTML → markdown/text). Không chạy JS. | https://docs.openclaw.ai/tools/web |
+
 ---
 
 Add whatever helps you do your job. This is your cheat sheet.

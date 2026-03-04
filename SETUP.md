@@ -363,11 +363,11 @@ docker compose exec openclaw openclaw cron add \
 
 Thay `<TELEGRAM_CHAT_ID>` bằng Chat ID của bạn.
 
-## Bước 9: API Integration (cho trang không cần browser)
+## Bước 9: API Integration
 
 ### Cách tiếp cận
 
-Nhiều trang web (ví dụ muasamcong.mpi.gov.vn) cung cấp API JSON trực tiếp. OpenClaw agent có thể gọi API bằng `exec curl` — không cần browser headless hay MCP server.
+Nhiều trang web (ví dụ muasamcong.mpi.gov.vn) cung cấp API JSON trực tiếp. OpenClaw agent có thể gọi API bằng `exec curl`.
 
 ### Ví dụ: Gọi API Mua Sắm Công
 
@@ -378,7 +378,7 @@ exec curl -s -X POST \
   -d '{"page": 1, "pageSize": 10}'
 ```
 
-Agent parse JSON response trực tiếp — nhanh, ổn định, không phụ thuộc Chromium/Playwright.
+Agent parse JSON response trực tiếp — nhanh và ổn định.
 
 ### Cron rà soát mua sắm công
 

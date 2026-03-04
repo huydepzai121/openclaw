@@ -14,7 +14,7 @@
   "agents": {
     "defaults": {
        "model": {
-         "primary": "myprovider/claude-opus-4-6"
+         "primary": "openai-codex/gpt-5.3-codex"
        },
       "sandbox": {
         "mode": "off"
@@ -27,14 +27,11 @@
     }
   },
   "tools": {
-    "browser": {
-      "enabled": true
-    },
     "web": {
       "search": { "enabled": true },
       "fetch": { "enabled": true }
     },
-    "allow": ["browser", "group:ui"]
+    "allow": ["group:ui", "group:runtime", "group:web"]
   },
   "channels": {
     "telegram": {
@@ -48,12 +45,12 @@
       }
     },
     "zalo": {
-      "enabled": true,
+      "enabled": false,
       "botToken": "${ZALO_BOT_TOKEN}",
       "dmPolicy": "pairing"
     },
     "slack": {
-      "enabled": true,
+      "enabled": false,
       "appToken": "${SLACK_APP_TOKEN}",
       "botToken": "${SLACK_BOT_TOKEN}",
       "mode": "socket"
@@ -63,18 +60,13 @@
      "port": 3000,
      "mode": "local"
   },
-  "sessions": {
-    "spawn": {
-      "enabled": true
-    }
-  },
   "plugins": {
     "entries": {
       "telegram": {
         "enabled": true
       },
       "zalo": {
-        "enabled": true
+        "enabled": false
       }
     }
   }
