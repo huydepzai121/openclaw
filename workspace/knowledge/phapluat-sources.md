@@ -38,16 +38,36 @@
 - Search tổng hợp: `văn bản pháp luật mới ban hành tuần này Việt Nam`
 - Search theo lĩnh vực: `nghị định thuế mới 2026`, `thông tư lao động mới`
 
-## Các lĩnh vực cần theo dõi
+## Các lĩnh vực cần theo dõi — Domain Keywords (dùng bởi skill vbpl-reviewer)
 
-- 🏗️ Đấu thầu, đầu tư công
-- 💰 Thuế, tài chính
-- 🏢 Doanh nghiệp, đầu tư
-- 👷 Lao động, bảo hiểm xã hội
-- 🏠 Bất động sản, xây dựng
-- 📈 Chứng khoán, ngân hàng
-- 💻 Công nghệ thông tin, an ninh mạng
-- 🌍 Thương mại quốc tế, hải quan
+| Emoji | Lĩnh vực | Keywords (case-insensitive) |
+|-------|----------|----------------------------|
+| 🏗️ | Đấu thầu, Đầu tư công | đấu thầu, mua sắm công, đầu tư công, lựa chọn nhà thầu |
+| 💰 | Thuế, Tài chính | thuế, ngân sách, tài chính, kế toán, kiểm toán, phí, lệ phí |
+| 🏢 | Doanh nghiệp, Đầu tư | doanh nghiệp, đầu tư, đăng ký kinh doanh, cổ phần, vốn |
+| 👷 | Lao động, BHXH | lao động, bảo hiểm xã hội, tiền lương, việc làm, an toàn lao động |
+| 🏠 | BĐS, Xây dựng | đất đai, bất động sản, xây dựng, nhà ở, quy hoạch |
+| 📈 | Chứng khoán, Ngân hàng | chứng khoán, ngân hàng, tín dụng, lãi suất, bảo hiểm |
+| 💻 | CNTT, An ninh mạng | công nghệ thông tin, an ninh mạng, dữ liệu, chuyển đổi số, viễn thông |
+| 🌍 | Thương mại QT, Hải quan | xuất khẩu, nhập khẩu, hải quan, thương mại, thuế quan, FTA |
+| 📋 | Khác | (không match keyword nào ở trên) |
+
+## Regex — Nhận dạng số hiệu văn bản (dùng bởi skill vbpl-reviewer để dedup)
+
+```
+Luật:           Luật số \d+/\d{4}/QH\d+
+Nghị quyết QH:  \d+/\d{4}/NQ-QH\d+
+                \d+/NQ-QH\d+
+Nghị quyết CP:  \d+/\d{4}/NQ-CP
+Nghị định:      \d+/\d{4}/NĐ-CP
+Quyết định TTg: \d+/\d{4}/QĐ-TTg
+Thông tư:       \d+/\d{4}/TT-[A-ZĐ]+
+Thông tư LT:    \d+/\d{4}/TTLT-[A-ZĐ\-]+
+Pháp lệnh:     \d+/\d{4}/PL-UBTVQH\d+
+Chỉ thị:       \d+/CT-TTg
+```
+
+> Normalize trước khi so sánh: lowercase, bỏ khoảng trắng thừa, chuẩn hóa dấu `/`.
 
 ## Văn bản quan trọng gần đây (cập nhật thường xuyên)
 
